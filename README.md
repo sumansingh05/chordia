@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Chordia
+
+A Spotify-inspired music streaming web app built with Next.js. Stream full-length tracks online via the Audius API, build your own library of liked songs and playlists, and search the whole catalog — all with a clean, dark, player-style UI.
+
+**Live site:** https://chordia.netlify.app
+
+## Features
+
+- **Online streaming** — full-length tracks from the Audius API (`/api/trending`, `/api/search`)
+- **Spotify-like UI** — dark theme, responsive player bar, sidebar navigation
+- **Your Library** — like tracks, create playlists, and see recently played (persisted in `localStorage`)
+- **Now Playing & Queue** — full-screen now-playing view with a playback queue
+- **Discover & Search** — browse by genre and time range, with live search suggestions
+- **Album pages** — per-album track lists with cover art
+
+## Tech Stack
+
+- [Next.js](https://nextjs.org) (App Router) + React
+- [Tailwind CSS](https://tailwindcss.com)
+- [Audius API](https://docs.audius.org) for streaming
+- Deployed on [Netlify](https://www.netlify.com)
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view it.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+## Deploying to Netlify
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+netlify deploy --prod --build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The repo is configured with `netlify.toml` (Node 22 + `@netlify/plugin-nextjs`). When connected to GitHub, every push to `main`/`master` triggers an automatic deploy.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/app/` — pages (`/`, `/search`, `/discover`, `/library`, `/albums/[id]`) and API routes
+- `src/components/` — player bar, sidebar, track lists, now playing, queue, library views
+- `src/context/` — `PlayerContext` (audio playback) and `LibraryContext` (likes/playlists)
+- `src/lib/` — shared types, genres, and helpers

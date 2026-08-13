@@ -1,16 +1,41 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Track } from "@/lib/types";
 import { albums, allTracks, getAlbum } from "@/lib/data";
 import { usePlayer } from "@/context/PlayerContext";
 import { formatTime } from "@/lib/format";
+import { GENRE_TILES } from "@/lib/genres";
 import AlbumCard from "@/components/AlbumCard";
 import TrackList from "@/components/TrackList";
-import { GlobeIcon, PauseIcon, PlayIcon, SearchIcon } from "@/components/icons";
+import {
+  GlobeIcon,
+  HeartFilledIcon,
+  HeartIcon,
+  PauseIcon,
+  PlayIcon,
+  SearchIcon,
+} from "@/components/icons";
+import { useLibrary } from "@/context/LibraryContext";
+
+function GenreTile({ name, color, colorTo }: { name: string; color: string; colorTo: string }) {
+  return (
+    <Link
+      href={`/discover?genre=${encodeURIComponent(name)}`}
+      className="relative aspect-square overflow-hidden rounded-lg p-3 transition-transform hover:scale-[1.03]"
+      style={{ background: `linear-gradient(135deg, ${color}, ${colorTo})` }}
+    >
+      <span className="absolute bottom-3 left-3 text-base font-extrabold leading-tight text-white">
+        {name}
+      </span>
+    </Link>
+  );
+}
 
 export default function SearchPage() {
   const { playTrack, currentTrack, isPlaying } = usePlayer();
+  const { isLiked, toggleLike } = useLibrary();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [online, setOnline] = useState<{ query: string; tracks: Track[] }>({
@@ -136,6 +161,8 @@ export default function SearchPage() {
     );
   };
 
+  const topResult = suggestions[0];
+
   return (
     <div className="px-4 py-6 md:px-8">
       <div className="relative">
@@ -218,50 +245,82 @@ export default function SearchPage() {
       </div>
 
       {!q && (
-        <div className="mt-16 flex flex-col items-center gap-4 text-center">
-          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white/5">
-            <SearchIcon className="h-9 w-9 text-neutral-500" />
-          </span>
-          <h2 className="text-xl font-bold text-white">Search the catalog</h2>
-          <p className="max-w-sm text-sm text-neutral-400">
-            Start typing to get instant suggestions. Click a song to play it
-            immediately — online tracks stream full-length songs.
-          </p>
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold text-white">Browse all</h2>
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+            {GENRE_TILES.map((g) => (
+              <GenreTile key={g.name} {...g} />
+            ))}
+          </div>
         </div>
       )}
 
-      {q && matchedAlbums.length > 0 && (
-        <section className="mt-8">
-          <h2 className="mb-4 text-xl font-bold text-white">Albums</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-            {matchedAlbums.map((album) => (
-              <AlbumCard key={album.id} album={album} />
-            ))}
-          </div>
-        </section>
-      )}
+      {q && (
+        <div className="mt-8">
+          {matchedAlbums.length > 0 && (
+            <section>
+              <h2 className="mb-4 text-xl font-bold text-white">Albums</h2>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                {matchedAlbums.map((album) => (
+                  <AlbumCard key={album.id} album={album} />
+                ))}
+              </div>
+            </section>
+          )}
 
-      {q && suggestions.length > 0 && (
-        <section className="mt-8">
-          <h2 className="mb-4 text-xl font-bold text-white">Results</h2>
-          <TrackList tracks={suggestions} showAlbum />
-        </section>
-      )}
+          {topResult && (
+            <section className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_2fr]">
+              <div className="rounded-xl bg-card p-5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                  Top result
+                </p>
+                <div className="mt-4">
+                  {cover(topResult, "h-28 w-28")}
+                </div>
+                <h3 className="mt-4 truncate text-2xl font-bold text-white">
+                  {topResult.title}
+                </h3>
+                <p className="mt-1 truncate text-sm text-neutral-400">
+                  {topResult.artist}
+                </p>
+                <div className="mt-4 flex items-center gap-2">
+                  <button
+                    onClick={() => handlePlay(topResult)}
+                    aria-label={`Play ${topResult.title}`}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-black transition-transform hover:scale-105"
+                  >
+                    <PlayIcon className="ml-0.5 h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => toggleLike(topResult)}
+                    aria-label={isLiked(topResult.id) ? "Unlike" : "Like"}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-300 transition-colors hover:text-white"
+                  >
+                    {isLiked(topResult.id) ? (
+                      <HeartFilledIcon className="h-5 w-5 text-accent" />
+                    ) : (
+                      <HeartIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
 
-      {q && matchedAlbums.length === 0 && suggestions.length === 0 && (
-        <p className="mt-10 text-sm text-neutral-400">
-          No results for “{query}”.
-        </p>
-      )}
+              <div>
+                <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-white">
+                  <GlobeIcon className="h-5 w-5 text-accent" />
+                  Songs
+                </h2>
+                <TrackList tracks={suggestions.slice(0, 8)} showAlbum />
+              </div>
+            </section>
+          )}
 
-      {q && online.query === term && (
-        <section className="mt-8">
-          <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-white">
-            <GlobeIcon className="h-5 w-5 text-accent" />
-            Online music
-          </h2>
-          <TrackList tracks={online.tracks} showAlbum />
-        </section>
+          {suggestions.length === 0 && matchedAlbums.length === 0 && (
+            <p className="mt-10 text-sm text-neutral-400">
+              No results for “{query}”.
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

@@ -19,3 +19,11 @@ export type Album = {
   colorTo: string;
   tracks: Track[];
 };
+
+export type Playlist = {
+  id: string;
+  name: string;
+  description: string;
+  tracks: Track[];
+  createdAt: number;
+};

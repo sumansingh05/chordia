@@ -3,11 +3,15 @@
 import { useMemo } from "react";
 import type { Album } from "@/lib/types";
 import { usePlayer } from "@/context/PlayerContext";
+import { useLibrary } from "@/context/LibraryContext";
 import { coverGradient } from "@/lib/data";
 import { formatTime } from "@/lib/format";
 import TrackList from "@/components/TrackList";
 import AlbumCard from "@/components/AlbumCard";
-import { PauseIcon, PlayIcon } from "@/components/icons";
+import AddToPlaylistDropdown, {
+  SaveButtonTrigger,
+} from "@/components/AddToPlaylistDropdown";
+import { HeartFilledIcon, HeartIcon, PauseIcon, PlayIcon } from "@/components/icons";
 
 type AlbumDetailProps = {
   album: Album;
@@ -16,17 +20,32 @@ type AlbumDetailProps = {
 
 export default function AlbumDetail({ album, related }: AlbumDetailProps) {
   const { currentTrack, isPlaying, playTrack, togglePlay } = usePlayer();
+  const { isLiked, toggleLike } = useLibrary();
+
   const albumActive = useMemo(
     () => album.tracks.some((t) => t.id === currentTrack?.id),
     [album, currentTrack]
   );
 
+  const allLiked = useMemo(
+    () => album.tracks.length > 0 && album.tracks.every((t) => isLiked(t.id)),
+    [album, isLiked]
+  );
+
   const totalDuration = album.tracks.reduce((n, t) => n + t.duration, 0);
+
+  const toggleAllLiked = () => {
+    for (const t of album.tracks) {
+      if (allLiked ? isLiked(t.id) : !isLiked(t.id)) {
+        toggleLike(t);
+      }
+    }
+  };
 
   return (
     <div className="px-4 py-6 md:px-8">
       <section
-        className="overflow-hidden rounded-2xl shadow-xl"
+        className="overflow-hidden rounded-xl shadow-xl"
         style={{ background: coverGradient(album) }}
       >
         <div className="flex flex-col gap-6 p-6 backdrop-blur-sm md:flex-row md:items-end md:p-10">
@@ -46,23 +65,42 @@ export default function AlbumDetail({ album, related }: AlbumDetailProps) {
               {album.artist} · {album.year} · {album.tracks.length} songs,{" "}
               {formatTime(totalDuration)}
             </p>
-            <button
-              onClick={() => {
-                if (albumActive) {
-                  togglePlay();
-                } else {
-                  playTrack(album.tracks[0], album.tracks);
-                }
-              }}
-              className="mt-6 inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3 text-sm font-bold text-black transition-transform hover:scale-105"
-            >
-              {albumActive && isPlaying ? (
-                <PauseIcon className="h-5 w-5" />
-              ) : (
-                <PlayIcon className="h-5 w-5" />
-              )}
-              {albumActive ? (isPlaying ? "Pause" : "Resume") : "Play"}
-            </button>
+            <div className="mt-6 flex items-center gap-4">
+              <button
+                onClick={() => {
+                  if (albumActive) {
+                    togglePlay();
+                  } else {
+                    playTrack(album.tracks[0], album.tracks);
+                  }
+                }}
+                className="inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3 text-sm font-bold text-black transition-transform hover:scale-105"
+              >
+                {albumActive && isPlaying ? (
+                  <PauseIcon className="h-5 w-5" />
+                ) : (
+                  <PlayIcon className="h-5 w-5" />
+                )}
+                {albumActive ? (isPlaying ? "Pause" : "Resume") : "Play"}
+              </button>
+              <button
+                onClick={toggleAllLiked}
+                aria-label={allLiked ? "Remove from liked songs" : "Save to liked songs"}
+                className="transition-transform hover:scale-110"
+              >
+                {allLiked ? (
+                  <HeartFilledIcon className="h-7 w-7 text-white drop-shadow" />
+                ) : (
+                  <HeartIcon className="h-7 w-7 text-white/90 drop-shadow" />
+                )}
+              </button>
+              <AddToPlaylistDropdown
+                tracks={album.tracks}
+                panelWidth={260}
+                triggerClassName="rounded-full bg-white/20 px-5 py-3 text-sm font-bold text-white backdrop-blur transition-colors hover:bg-white/30"
+                trigger={<SaveButtonTrigger />}
+              />
+            </div>
           </div>
         </div>
       </section>

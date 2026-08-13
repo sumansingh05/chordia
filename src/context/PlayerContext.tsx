@@ -17,20 +17,27 @@ type RepeatMode = "off" | "all" | "one";
 type PlayerContextValue = {
   currentTrack: Track | null;
   queue: Track[];
+  queueIndex: number;
   isPlaying: boolean;
   currentTime: number;
   duration: number;
   volume: number;
   repeat: RepeatMode;
   isShuffled: boolean;
+  nowPlayingOpen: boolean;
+  queueOpen: boolean;
   playTrack: (track: Track, queue?: Track[]) => void;
   togglePlay: () => void;
   next: () => void;
   previous: () => void;
+  playIndex: (index: number) => void;
+  removeFromQueue: (index: number) => void;
   seek: (time: number) => void;
   setVolume: (volume: number) => void;
   toggleRepeat: () => void;
   toggleShuffle: () => void;
+  setNowPlayingOpen: (open: boolean) => void;
+  setQueueOpen: (open: boolean) => void;
 };
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
@@ -43,9 +50,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolumeState] = useState(0.8);
+  const [volume, setVolumeState] = useState<number>(() => {
+    if (typeof window === "undefined") return 0.8;
+    try {
+      const saved = window.localStorage.getItem("chordia.volume");
+      if (saved) {
+        const v = Number(saved);
+        if (Number.isFinite(v) && v >= 0 && v <= 1) return v;
+      }
+    } catch {
+      // ignore
+    }
+    return 0.8;
+  });
   const [repeat, setRepeat] = useState<RepeatMode>("all");
   const [isShuffled, setIsShuffled] = useState(false);
+  const [nowPlayingOpen, setNowPlayingOpen] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(false);
 
   const shuffleQueueRef = useRef<Track[]>([]);
   const shuffleIndexRef = useRef(0);
@@ -148,6 +169,55 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [loadTrack]);
 
+  const playIndex = useCallback(
+    (index: number) => {
+      const s = stateRef.current;
+      const track = s.queue[index];
+      if (!track) return;
+      if (s.isShuffled) {
+        const rest = s.queue.filter((t) => t.id !== track.id);
+        const mixed = shuffle(rest);
+        shuffleQueueRef.current = [track, ...mixed];
+        shuffleIndexRef.current = 0;
+      }
+      loadTrack(track, s.queue, index);
+    },
+    [loadTrack]
+  );
+
+  const removeFromQueue = useCallback(
+    (index: number) => {
+      const s = stateRef.current;
+      const q = [...s.queue];
+      if (index < 0 || index >= q.length) return;
+      const removedId = q[index]?.id;
+      q.splice(index, 1);
+
+      if (s.isShuffled && removedId) {
+        shuffleQueueRef.current = shuffleQueueRef.current.filter(
+          (t) => t.id !== removedId
+        );
+      }
+
+      if (index === s.queueIndex) {
+        if (q.length === 0) {
+          setQueue([]);
+          setQueueIndex(-1);
+          setCurrentTrack(null);
+          setIsPlaying(false);
+          if (audioRef.current) audioRef.current.pause();
+          return;
+        }
+        const nextIndex = Math.min(index, q.length - 1);
+        loadTrack(q[nextIndex], q, nextIndex);
+      } else {
+        setQueue(q);
+        setQueueIndex(index < s.queueIndex ? s.queueIndex - 1 : s.queueIndex);
+      }
+    },
+    [loadTrack]
+  );
+
   const playTrack = useCallback(
     (track: Track, q?: Track[]) => {
       const queueTracks = q && q.length > 0 ? q : [track];
@@ -194,6 +264,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const clamped = Math.max(0, Math.min(1, v));
     setVolumeState(clamped);
     if (audioRef.current) audioRef.current.volume = clamped;
+    try {
+      window.localStorage.setItem("chordia.volume", String(clamped));
+    } catch {
+      // ignore
+    }
   }, []);
 
   const toggleRepeat = useCallback(() => {
@@ -249,20 +324,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       value={{
         currentTrack,
         queue,
+        queueIndex,
         isPlaying,
         currentTime,
         duration,
         volume,
         repeat,
         isShuffled,
+        nowPlayingOpen,
+        queueOpen,
         playTrack,
         togglePlay,
         next,
         previous,
+        playIndex,
+        removeFromQueue,
         seek,
         setVolume,
         toggleRepeat,
         toggleShuffle,
+        setNowPlayingOpen,
+        setQueueOpen,
       }}
     >
       {children}

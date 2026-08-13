@@ -1,14 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0b;
+  --background: #000000;
+  --surface: #121212;
+  --card: #181818;
+  --card-hover: #282828;
+  --divider: #ffffff1a;
   --foreground: #ededed;
+  --muted: #b3b3b3;
+  --faint: #7a7a7a;
   --accent: #1ed760;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
+  --color-divider: var(--divider);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
   --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -45,4 +57,12 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #444;
+}
+
+/* Hide scrollbars for pill rows while keeping them scrollable */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
 }
